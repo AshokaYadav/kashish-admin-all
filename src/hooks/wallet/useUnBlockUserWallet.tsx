@@ -1,21 +1,19 @@
-// hooks/operator-apis/use-update-operator-api.ts
+import { Wallet } from '@/apis';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Circles } from '@/apis';
 
 
-
-export const useDeleteCircle = (
+export default function useUnblockUserWallet(
     onSuccessCb: () => void,
-    onErrorCb: (error: string[]) => void
-) => {
+    onErrorCb: (error: string[]) => void) {
     const queryClient = useQueryClient();
+
     const mutation = useMutation({
         mutationFn: async (id: string) => {
-            const { data } = await Circles.deleteCircle(id);
+            const { data } = await Wallet.user.unBlockUserWallet(id);
             return data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['delete-cirlce'] });
+            queryClient.invalidateQueries({ queryKey: ['unblock-user-wallet'] });
             onSuccessCb();
         },
         onError: (error) => {
@@ -24,7 +22,7 @@ export const useDeleteCircle = (
 
     });
     return {
-        delete: mutation.mutate,
-        isDeleting: mutation.isPending
+        unBlock: mutation.mutate,
+        isUnblocking: mutation.isPending
     };
 };

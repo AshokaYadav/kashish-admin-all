@@ -1,21 +1,26 @@
 // hooks/operator-apis/use-update-operator-api.ts
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Circles } from '@/apis';
+import { OperatorApis } from '@/apis';
 
+export interface UpdateOperatorApiData {
+    id: string;
+    code?: string;
+    status?: string;
+}
 
-
-export const useDeleteCircle = (
+export const useUpdateOperatorApi = (
     onSuccessCb: () => void,
     onErrorCb: (error: string[]) => void
 ) => {
     const queryClient = useQueryClient();
+
     const mutation = useMutation({
-        mutationFn: async (id: string) => {
-            const { data } = await Circles.deleteCircle(id);
+        mutationFn: async (updateData: UpdateOperatorApiData) => {
+            const { data } = await OperatorApis.updateOperatorApi(updateData);
             return data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['delete-cirlce'] });
+            queryClient.invalidateQueries({ queryKey: ['operator-apis'] });
             onSuccessCb();
         },
         onError: (error) => {
@@ -24,7 +29,7 @@ export const useDeleteCircle = (
 
     });
     return {
-        delete: mutation.mutate,
-        isDeleting: mutation.isPending
+        update: mutation.mutate,
+        isUpdating: mutation.isPending
     };
 };
