@@ -1,0 +1,44 @@
+# Node modules
+node_modules/
+
+# Build output
+.next/
+out/
+dist/
+
+# Production files
+.next/
+.vercel/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS-generated
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
+
+# Optional: ignore typescript build cache
+*.tsbuildinfo
+
+# Optional: ignore eslint cache
+.eslintcache
+
+# Optional: ignore Next.js cache
+.next/cache/
+
+# Optional: Ignore coverage reports
+coverage/
