@@ -71,7 +71,7 @@ export function TransactionTable({ transactions, isLoading }: TransactionTablePr
             // Handle the response based on your needs
             if (response.ok) {
                 // Success handling
-                alert(`Payment check completed for transaction ${transaction.id}`);
+                // alert(`Payment check completed for transaction ${transaction.id}`);
             } else {
                 // Error handling
                 alert(`Payment check failed for transaction ${transaction.id}: ${result.message || 'Unknown error'}`);

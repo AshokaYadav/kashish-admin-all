@@ -1310,7 +1310,11 @@ export function TransactionTable({ transactions, isLoading }: TransactionTablePr
                 })()}
               </TableCell>
 
-              <TableCell className="text-center font-medium text-gray-700 border border-gray-400 p-3">
+
+
+
+
+              {/* <TableCell className="text-center font-medium text-gray-700 border border-gray-400 p-3">
                 {(() => {
                   const isDistributor = transaction?.user?.role === "DISTRIBUTOR";
 
@@ -1339,8 +1343,11 @@ export function TransactionTable({ transactions, isLoading }: TransactionTablePr
                       : "---";
                   }
                 })()}
-              </TableCell>
+              </TableCell> */}
 
+              <TableCell className="text-center font-medium text-gray-700 border border-gray-400 p-3">
+                {transaction?.rechargeData?.charge_amount ?formatCurrency(transaction?.rechargeData?.charge_amount) : formatCurrency(0)}
+              </TableCell>
 
 
 

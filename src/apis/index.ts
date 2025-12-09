@@ -10,7 +10,7 @@ import { blockUserWallet, creditApiWallet, creditUserWallet, debitApiWallet, deb
 import { checkRechargeStatus, createComplaint, fetchComplaint, fetchRechargeHistories, updateComplaint } from './recharge/history';
 import { fetchApiWalletTransactionHistories, fetchUserWalletTransactionHistories, fetchCreditUrl, createDebitWalletRequest, fetchDebits, updateDebits } from "./wallets/transactions"
 import { createOperatorCircleLink, deleteOperatorCircleLink, fetchAllOperatorCircleLinks, GetOperatorCircle, updateOperatorCircleLink } from "./op-circle-link"
-
+import { getWalletUsers } from "./admin-members"
 
 export const Stats = {
     fetchCircleRecharges,
@@ -136,4 +136,9 @@ export const Wallet = {
         fetchDebits,
         updateDebits,
     }
+}
+
+
+export const Members ={
+    getWalletUsers
 }

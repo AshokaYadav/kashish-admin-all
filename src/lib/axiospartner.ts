@@ -3,7 +3,7 @@ import { store } from "@/store/store";
 import { logout } from "@/store/features/auth/authSlice";
 import { toast } from "sonner";
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "https://api.recharge.kashishindiapvtltd.com/";
+const baseURL = process.env.NEXT_PUBLIC_PARTNER_API || "https://api.partner.kashishindiapvtltd.com/";
 
 export const axiosInstance = axios.create({
   baseURL,
