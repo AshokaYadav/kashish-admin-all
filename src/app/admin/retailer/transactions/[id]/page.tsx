@@ -264,11 +264,11 @@ export default function TransactionsPage() {
                 isLoading={isLoadingTxns}
             />
 
-            <TransactionPagination
+            {/* <TransactionPagination
                 currentPage={paginatedParams.page}
                 totalPages={data?.pagination.totalPages || 1}
                 onPageChange={handlePageChange}
-            />
+            /> */}
 
             {
                 (data) ? <PDFDownloadSection rechargeData={data?.data || []} user={user.name} mobile={user.mobile} email={user.email}/> : (<></>)

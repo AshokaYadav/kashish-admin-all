@@ -9,7 +9,7 @@ interface StatCardProps {
 }
 
 export default function StatCard({ title, bg, children }: StatCardProps) {
-  const [open, setOpen] = useState<boolean>(true);
+  const [open, setOpen] = useState<boolean>(false);
 
   return (
     <div className="border rounded-md shadow transition-all duration-300 h-fit">

@@ -17,9 +17,25 @@ export default function LoginHistoryTableHeader() {
                 </TableHead>
                 <TableHead>
                     <div className="flex items-center gap-1">
+                        <AtSign className="h-4 w-4" /> Phone
+                    </div>
+                </TableHead>
+                <TableHead>
+                    <div className="flex items-center gap-1">
+                        <AtSign className="h-4 w-4" /> Name
+                    </div>
+                </TableHead>
+                <TableHead>
+                    <div className="flex items-center gap-1">
                         <AtSign className="h-4 w-4" /> Email
                     </div>
                 </TableHead>
+                <TableHead>
+                    <div className="flex items-center gap-1">
+                        <AtSign className="h-4 w-4" /> device_info
+                    </div>
+                </TableHead>
+                
                 <TableHead>
                     <div className="flex items-center gap-1">
                         <Globe className="h-4 w-4" /> IP Address

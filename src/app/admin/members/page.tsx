@@ -15,6 +15,10 @@ import WalletModal from "@/components/admin/Modal/WalletModal";
 import { useRouter } from "next/navigation";
 import WalletUsersTable from "@/components/admin/WalletUsersTable";
 import DashboardStats from "@/components/admin/DashboardStats";
+import DateRangeFilter from "@/components/admin/DateRangeFilter";
+import Pagination from "@/components/admin/Pagination1";
+import PageSizeSelector from "@/components/admin/PageSizeSelector";
+import WalletUsersFilters from "@/components/admin/member/WalletUsersFilters";
 
 export default function WalletUsersPage() {
   const [page, setPage] = useState(1);
@@ -22,12 +26,17 @@ export default function WalletUsersPage() {
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
 
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const [openModal, setOpenModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
   // Agar aapka hook filter support karta hai to ise update karein
   const { data, isLoading, isError } = useWalletUsers(page);
   const router = useRouter();
+
+  const [itemsPerPage, setItemsPerPage] = useState(50);
 
   // Agar backend se filter na ho to frontend mein filter karein
   let wallets = data?.data?.wallets ?? [];
@@ -53,7 +62,25 @@ export default function WalletUsersPage() {
     wallets = wallets.filter((item: any) => item.user?.status === statusBool);
   }
 
-  const totalPage = data?.data?.totalPage ?? 1;
+  if (startDate && endDate) {
+    const [sd, sm, sy] = startDate.split("/").map(Number);
+    const [ed, em, ey] = endDate.split("/").map(Number);
+
+    const start = new Date(sy, sm - 1, sd);
+    const end = new Date(ey, em - 1, ed);
+
+    wallets = wallets.filter((item: any) => {
+      const created = new Date(item.createdAt);
+      return created >= start && created <= end;
+    });
+  }
+
+  //   const totalPages = data?.data?.totalPage ?? 1;
+
+  const totalPages = Math.ceil(wallets.length / itemsPerPage);
+
+  const startIndex = (page - 1) * itemsPerPage;
+  const paginatedData = wallets.slice(startIndex, startIndex + itemsPerPage);
 
   if (isLoading) return <p className="p-4">Loading...</p>;
   if (isError)
@@ -68,158 +95,61 @@ export default function WalletUsersPage() {
     setSearch("");
     setRole("");
     setStatus("");
+    setPage(1);
   };
 
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-4">Users Wallet List</h2>
       <DashboardStats />
-      {/* FILTER SECTION - Table ke upper */}
-      <div className="bg-white p-4 rounded-lg shadow border border-gray-200 mb-4">
-        <div className="flex flex-col md:flex-row gap-4 items-end">
-          {/* Search Input */}
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
-            <div className="relative">
-              <MdSearch
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <input
-                type="text"
-                placeholder="Search by name, mobile, email..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-          </div>
-          {/* memeber Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Packages
-            </label>
-            <select
-              className="w-full md:w-40 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              <option value="">Package type</option>
-              <option value="app_user">Api Partner</option>
-              <option value="retailer">Distributors</option>
-              <option value="distributor">Retailers</option>
-              <option value="apipartner">Users</option>
-            </select>
-          </div>
+      {/* FILTER SECTION - Table ke upper bhai mujhe eh filter section ko.. ek or page me use karna hia.. */}
+      <WalletUsersFilters
+        search={search}
+        setSearch={setSearch}
+        role={role}
+        setRole={setRole}
+        status={status}
+        setStatus={setStatus}
+        startDate={startDate}
+        endDate={endDate}
+        setStartDate={setStartDate}
+        setEndDate={setEndDate}
+        setPage={setPage}
+        totalCount={wallets.length}
+        onReset={handleResetFilters}
+      />
 
-          {/* Role Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Role
-            </label>
-            <select
-              className="w-full md:w-40 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              <option value="">All Roles</option>
-              <option value="app_user">App User</option>
-              <option value="retailer">Retailer</option>
-              <option value="distributor">Distributor</option>
-              <option value="apipartner">API Partner</option>
-            </select>
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              className="w-full md:w-40 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-
-          {/* Reset Button */}
-          <div>
-            <button
-              onClick={handleResetFilters}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 flex items-center gap-2"
-            >
-              <MdFilterList size={18} />
-              Reset
-            </button>
-          </div>
-        </div>
-
-        {/* Active Filters Display */}
-        {(search || role || status) && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium text-gray-700">Active Filters:</span>
-              {search && (
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                  Search: "{search}"
-                </span>
-              )}
-              {role && (
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                  Role: {role}
-                </span>
-              )}
-              {status && (
-                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs">
-                  Status: {status}
-                </span>
-              )}
-              <span className="ml-2 text-gray-500">
-                ({wallets.length} records found)
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
+      <PageSizeSelector
+        pageSize={itemsPerPage}
+        onChange={(v) => {
+          setItemsPerPage(v);
+          setPage(1); // Reset page when user changes page size
+        }}
+      />
 
       {/* TABLE */}
-      <WalletUsersTable wallets={wallets} handleOpen={handleOpen} />
+      <WalletUsersTable
+        wallets={paginatedData}
+        handleOpen={handleOpen}
+        startIndex={startIndex}
+      />
 
       {/* PAGINATION */}
-      <div className="flex items-center justify-between mt-4">
-        <div className="text-sm text-gray-600">
-          Showing {wallets.length} records
-          {(search || role || status) && " (filtered)"}
-        </div>
+      {/* <Pagination
+        page={page}
+        totalPage={totalPage}
+        showCount={wallets.length}
+        onPageChange={(newPage) => setPage(newPage)}
+      /> */}
 
-        <div className="flex items-center gap-6">
-          <button
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-            className="px-3 py-1 bg-gray-300 rounded disabled:opacity-40"
-          >
-            Prev
-          </button>
+      {/* <Pagination
+        page={page}
+        totalPage={totalPage}
+        showCount={wallets.length}
+        onPageChange={(newPage) => setPage(newPage)}
+      /> */}
 
-          <span className="font-medium">
-            Page {page} / {totalPage}
-          </span>
-
-          <button
-            disabled={page >= totalPage}
-            onClick={() => setPage((p) => p + 1)}
-            className="px-3 py-1 bg-gray-300 rounded disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      <Pagination page={page} totalPages={totalPages} onChange={setPage} />
 
       {/* MODAL */}
       {openModal && (

@@ -1,278 +1,464 @@
 // components/TransactionTable.tsx
 import { useState } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpCircle, ArrowDownCircle, Loader2, Check, Minus, History } from "lucide-react";
-import { formatCurrency, formatDate, getStatusBadge, getTransactionType, formatTransactionType } from '../utils/format';
-import { Transaction } from '../types/types';
+import {
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Loader2,
+  Check,
+  Minus,
+  History,
+} from "lucide-react";
+import {
+  formatCurrency,
+  formatDate,
+  getStatusBadge,
+  getTransactionType,
+  formatTransactionType,
+} from "../utils/format";
+import { Transaction } from "../types/types";
 import { ITxnHistory } from "@/apis/wallets/transactions";
 import { PopoverTrigger } from "@radix-ui/react-popover";
+import { MdContentCopy } from "react-icons/md";
 
 interface TransactionTableProps {
-    transactions: ITxnHistory[];
-    isLoading: boolean;
+  transactions: ITxnHistory[];
+  isLoading: boolean;
 }
 
-export function TransactionTable({ transactions, isLoading }: TransactionTableProps) {
-    const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
-    const [isCheckingPayments, setIsCheckingPayments] = useState(false);
-    const [checkingTransactionId, setCheckingTransactionId] = useState<string | null>(null);
+export function TransactionTable({
+  transactions,
+  isLoading,
+}: TransactionTableProps) {
+  const [selectedTransactions, setSelectedTransactions] = useState<string[]>(
+    []
+  );
+  const [isCheckingPayments, setIsCheckingPayments] = useState(false);
+  const [checkingTransactionId, setCheckingTransactionId] = useState<
+    string | null
+  >(null);
 
-    if (isLoading) {
-        return <div className="text-center py-4">Loading...</div>;
+  if (isLoading) {
+    return <div className="text-center py-4">Loading...</div>;
+  }
+
+  const renderTransactionIcon = (type: string) => {
+    const { icon } = getTransactionType(type);
+    return icon === "up" ? (
+      <ArrowUpCircle className="h-4 w-4 text-emerald-500" />
+    ) : (
+      <ArrowDownCircle className="h-4 w-4 text-blue-500" />
+    );
+  };
+
+  const handleCheckboxChange = (transactionId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedTransactions((prev) => [...prev, transactionId]);
+    } else {
+      setSelectedTransactions((prev) =>
+        prev.filter((id) => id !== transactionId)
+      );
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedTransactions([]);
+    } else {
+      setSelectedTransactions(transactions.map((t) => t.id));
+    }
+  };
+
+  const checkPaymentStatus = async (transaction: ITxnHistory) => {
+    setCheckingTransactionId(transaction.id);
+    const token = localStorage.getItem("token"); // Adjust based on your auth logic
+    console.log("Using token:", token);
+    try {
+      const response = await fetch(
+        "https://api.recharge.kashishindiapvtltd.com/payments/check-payment",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            // Add authorization headers if needed
+            Authorization: `${token}`,
+          },
+          body: JSON.stringify({
+            // Add the required payload based on your API requirements
+            id: transaction.remote_order_id,
+            // Add other required fields
+          }),
+        }
+      );
+
+      const result = await response.json();
+      console.log(
+        `Payment check result for transaction ${transaction.id}:`,
+        result
+      );
+
+      // Handle the response based on your needs
+      if (response.ok) {
+        // Success handling
+        // alert(`Payment check completed for transaction ${transaction.id}`);
+      } else {
+        // Error handling
+        alert(
+          `Payment check failed for transaction ${transaction.id}: ${
+            result.message || "Unknown error"
+          }`
+        );
+      }
+    } catch (error) {
+      console.error(
+        `Error checking payment for transaction ${transaction.id}:`,
+        error
+      );
+      alert(`Error checking payment for transaction ${transaction.id}`);
+    } finally {
+      setCheckingTransactionId(null);
+    }
+  };
+
+  const checkSelectedPayments = async () => {
+    if (selectedTransactions.length === 0) {
+      alert("Please select at least one transaction");
+      return;
     }
 
-    const renderTransactionIcon = (type: string) => {
-        const { icon } = getTransactionType(type);
-        return icon === 'up' ?
-            <ArrowUpCircle className="h-4 w-4 text-emerald-500" /> :
-            <ArrowDownCircle className="h-4 w-4 text-blue-500" />;
-    };
+    setIsCheckingPayments(true);
 
-    const handleCheckboxChange = (transactionId: string, checked: boolean) => {
-        if (checked) {
-            setSelectedTransactions(prev => [...prev, transactionId]);
-        } else {
-            setSelectedTransactions(prev => prev.filter(id => id !== transactionId));
-        }
-    };
+    for (const transactionId of selectedTransactions) {
+      const transaction = transactions.find((t) => t.id === transactionId);
+      if (transaction) {
+        await checkPaymentStatus(transaction);
+        // Add a small delay between requests to avoid overwhelming the API
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
 
-    const handleSelectAll = () => {
-        if (isAllSelected) {
-            setSelectedTransactions([]);
-        } else {
-            setSelectedTransactions(transactions.map(t => t.id));
-        }
-    };
+    setIsCheckingPayments(false);
+    setSelectedTransactions([]); // Clear selection after processing
+  };
 
-    const checkPaymentStatus = async (transaction: ITxnHistory) => {
-        setCheckingTransactionId(transaction.id);
-        const token = localStorage.getItem('token'); // Adjust based on your auth logic
-        console.log('Using token:', token);
-        try {
-            const response = await fetch('https://api.recharge.kashishindiapvtltd.com/payments/check-payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Add authorization headers if needed
-                    'Authorization': `${token}`
-                },
-                body: JSON.stringify({
-                    // Add the required payload based on your API requirements
-                    id: transaction.remote_order_id,
-                    // Add other required fields
-                })
-            });
-
-            const result = await response.json();
-            console.log(`Payment check result for transaction ${transaction.id}:`, result);
-
-            // Handle the response based on your needs
-            if (response.ok) {
-                // Success handling
-                // alert(`Payment check completed for transaction ${transaction.id}`);
-            } else {
-                // Error handling
-                alert(`Payment check failed for transaction ${transaction.id}: ${result.message || 'Unknown error'}`);
-            }
-        } catch (error) {
-            console.error(`Error checking payment for transaction ${transaction.id}:`, error);
-            alert(`Error checking payment for transaction ${transaction.id}`);
-        } finally {
-            setCheckingTransactionId(null);
-        }
-    };
-
-    const checkSelectedPayments = async () => {
-        if (selectedTransactions.length === 0) {
-            alert('Please select at least one transaction');
-            return;
-        }
-
-        setIsCheckingPayments(true);
-
-        for (const transactionId of selectedTransactions) {
-            const transaction = transactions.find(t => t.id === transactionId);
-            if (transaction) {
-                await checkPaymentStatus(transaction);
-                // Add a small delay between requests to avoid overwhelming the API
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-        }
-
-        setIsCheckingPayments(false);
-        setSelectedTransactions([]); // Clear selection after processing
-    };
-
-    // Custom Checkbox Component
-    const CustomCheckbox = ({
-        checked,
-        indeterminate = false,
-        onCheckedChange,
-        disabled = false
-    }: {
-        checked: boolean;
-        indeterminate?: boolean;
-        onCheckedChange: (checked: boolean) => void;
-        disabled?: boolean;
-    }) => (
-        <button
-            type="button"
-            onClick={() => onCheckedChange(!checked)}
-            disabled={disabled}
-            className={`
+  // Custom Checkbox Component
+  const CustomCheckbox = ({
+    checked,
+    indeterminate = false,
+    onCheckedChange,
+    disabled = false,
+  }: {
+    checked: boolean;
+    indeterminate?: boolean;
+    onCheckedChange: (checked: boolean) => void;
+    disabled?: boolean;
+  }) => (
+    <button
+      type="button"
+      onClick={() => onCheckedChange(!checked)}
+      disabled={disabled}
+      className={`
                 w-4 h-4 rounded border-2 flex items-center border-gray-500 justify-center transition-colors
-                ${disabled ? 'opacity-100 border border-black cursor-not-allowed ' : 'cursor-pointer'}
-                ${checked
-                    ? 'bg-blue-600 border-blue-600 text-white'
+                ${
+                  disabled
+                    ? "opacity-100 border border-black cursor-not-allowed "
+                    : "cursor-pointer"
+                }
+                ${
+                  checked
+                    ? "bg-blue-600 border-blue-600 text-white"
                     : indeterminate
-                        ? 'bg-blue-600 border-blue-600 text-white'
-                        : 'border-gray-300 hover:border-blue-400'
+                    ? "bg-blue-600 border-blue-600 text-white"
+                    : "border-gray-300 hover:border-blue-400"
                 }
             `}
+    >
+      {checked && <Check className="h-3 w-3 text-black" />}
+      {indeterminate && !checked && <Minus className="h-3 w-3" />}
+    </button>
+  );
+  const isAllSelected =
+    selectedTransactions.length === transactions.length &&
+    transactions.length > 0;
+  const isPartiallySelected =
+    selectedTransactions.length > 0 &&
+    selectedTransactions.length < transactions.length;
+
+  return (
+    <div className="space-y-4">
+      {/* Action buttons */}
+      <div className="flex items-center gap-4">
+        <Button
+          onClick={checkSelectedPayments}
+          disabled={selectedTransactions.length === 0 || isCheckingPayments}
+          className="bg-blue-600 hover:bg-blue-700"
         >
-            {checked && <Check className="h-3 w-3 text-black" />}
-            {indeterminate && !checked && <Minus className="h-3 w-3" />}
-        </button>
-    );
-    const isAllSelected = selectedTransactions.length === transactions.length && transactions.length > 0;
-    const isPartiallySelected = selectedTransactions.length > 0 && selectedTransactions.length < transactions.length;
+          {isCheckingPayments ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Checking Payments...
+            </>
+          ) : (
+            `Total Checking (${selectedTransactions.length})`
+          )}
+        </Button>
 
-    return (
-        <div className="space-y-4">
-            {/* Action buttons */}
-            <div className="flex items-center gap-4">
-                <Button
-                    onClick={checkSelectedPayments}
-                    disabled={selectedTransactions.length === 0 || isCheckingPayments}
-                    className="bg-blue-600 hover:bg-blue-700"
-                >
-                    {isCheckingPayments ? (
-                        <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Checking Payments...
-                        </>
-                    ) : (
-                        `Total Checking (${selectedTransactions.length})`
-                    )}
-                </Button>
+        {selectedTransactions.length > 0 && (
+          <Button
+            variant="outline"
+            onClick={() => setSelectedTransactions([])}
+            disabled={isCheckingPayments}
+          >
+            Clear Selection
+          </Button>
+        )}
+      </div>
 
-                {selectedTransactions.length > 0 && (
-                    <Button
-                        variant="outline"
-                        onClick={() => setSelectedTransactions([])}
-                        disabled={isCheckingPayments}
+      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-gray-400 text-black">
+              <TableHead className="w-12">
+                <CustomCheckbox
+                  checked={isAllSelected}
+                  indeterminate={isPartiallySelected}
+                  onCheckedChange={() => handleSelectAll()}
+                  disabled={isCheckingPayments}
+                />
+              </TableHead>
+              <TableHead className="text-center text-black w-4 border border-gray-300 text-gray-600">
+                Sr.
+              </TableHead>
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                Time
+              </TableHead>
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                Type
+              </TableHead>
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                Member Type
+              </TableHead>
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                User
+              </TableHead>
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                Status
+              </TableHead>
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                Opening Balance
+              </TableHead>
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                Amount
+              </TableHead>
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                Closing Balance
+              </TableHead>
+              {/* remote_order_id */}
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                Order Id/Payment Id
+              </TableHead>
+
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                RRN
+              </TableHead>
+              <TableHead className="text-gray-600 text-black border border-gray-300 text-center">
+                UPI
+              </TableHead>
+              {/* <TableHead className="text-gray-600">Message</TableHead> */}
+              {/* <TableHead className="text-gray-600 text-center">Action</TableHead> */}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {transactions.map((transaction, index) => (
+              <TableRow
+                key={transaction.id}
+                className=" even:bg-gray-300 text-sm hover:bg-gray-50/50"
+              >
+                <TableCell className="border  border-gray-400">
+                  <CustomCheckbox
+                    checked={selectedTransactions.includes(transaction.id)}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxChange(transaction.id, checked)
+                    }
+                    disabled={isCheckingPayments}
+                  />
+                </TableCell>
+                <TableCell className="text-gray-600 text-center font-sm border border-gray-400">
+                  {index + 1}
+                </TableCell>
+                <TableCell className="text-gray-600 border border-gray-400">
+                  {formatDate(transaction.createdAt)}
+                </TableCell>
+                <TableCell className="border border-gray-400">
+                  <div className="flex items-center text-sm gap-1">
+                    {renderTransactionIcon(transaction.type)}
+                    <span
+                      className={`${
+                        getTransactionType(transaction.type).color
+                      } whitespace-nowrap truncate`}
                     >
-                        Clear Selection
+                      {transaction.type == "CASH"
+                        ? "Add Money by RZP"
+                        : formatTransactionType(transaction.type)}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className=" text-gray-700 border border-gray-400">
+                  {transaction.user?.role || "N/A"}
+                </TableCell>
+                <TableCell className="text-gray-700 border border-gray-400">
+                  {/* Name */}
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">
+                      {transaction.user?.name || "N/A"}
+                    </span>
+                    {transaction.user?.name && (
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(transaction.user.name)
+                        }
+                        className="text-gray-400 hover:text-gray-900"
+                        title="Copy Name"
+                      >
+                        <MdContentCopy size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Mobile */}
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>{transaction.user?.mobile || "N/A"}</span>
+                    {transaction.user?.mobile && (
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(transaction.user.mobile)
+                        }
+                        className="text-gray-400 hover:text-gray-900"
+                        title="Copy Mobile"
+                      >
+                        <MdContentCopy size={13} />
+                      </button>
+                    )}
+                  </div>
+                </TableCell>
+
+                <TableCell className="border border-gray-400">
+                  <Badge
+                    variant="secondary"
+                    className={getStatusBadge(transaction.status)}
+                  >
+                    {transaction.status}
+                    <br />
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-5 hover:bg-gray-100"
+                      onClick={() => checkPaymentStatus(transaction)}
+                    >
+                      <History className="h-5 w-5 text-gray-500" />
                     </Button>
-                )}
-            </div>
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
+                  {formatCurrency(transaction.opening_balance)}
+                </TableCell>
+                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
+                  {formatCurrency(transaction.amount)}
+                </TableCell>
+                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
+                  {formatCurrency(transaction.closing_balance)}
+                </TableCell>
+                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
+                  {/* Remote Order ID */}
+                  <div className="flex items-center justify-center gap-2 text-sm font-semibold text-gray-800">
+                    <span>{transaction?.remote_order_id || "N/A"}</span>
+                    {transaction?.remote_order_id && (
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(
+                            transaction.remote_order_id
+                          )
+                        }
+                        className="text-gray-400 hover:text-gray-900"
+                        title="Copy Order ID"
+                      >
+                        <MdContentCopy size={14} />
+                      </button>
+                    )}
+                  </div>
 
-            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                <Table>
-                    <TableHeader>
-                        <TableRow className="bg-gray-400 text-black">
-                            <TableHead className="w-12">
-                                <CustomCheckbox
-                                    checked={isAllSelected}
-                                    indeterminate={isPartiallySelected}
-                                    onCheckedChange={() => handleSelectAll()}
-                                    disabled={isCheckingPayments}
-                                />
-                            </TableHead>
-                            <TableHead className="text-center text-black w-4 border border-gray-300 text-gray-600">Sr.</TableHead>
-                            <TableHead className="text-gray-600 text-black border border-gray-300 text-center">Time</TableHead>
-                            <TableHead className="text-gray-600 text-black border border-gray-300 text-center">Type</TableHead>
-                            <TableHead className="text-gray-600 text-black border border-gray-300 text-center">User</TableHead>
-                            <TableHead className="text-gray-600 text-black border border-gray-300 text-center">Status</TableHead>
-                            <TableHead className="text-gray-600 text-black border border-gray-300 text-center">Opening Balance</TableHead>
-                            <TableHead className="text-gray-600 text-black border border-gray-300 text-center">Amount</TableHead>
-                            <TableHead className="text-gray-600 text-black border border-gray-300 text-center">Closing Balance</TableHead>
-                            <TableHead className="text-gray-600 text-black border border-gray-300 text-center">RRN</TableHead>
-                            <TableHead className="text-gray-600 text-black border border-gray-300 text-center">UPI</TableHead>
-                            {/* <TableHead className="text-gray-600">Message</TableHead> */}
-                            {/* <TableHead className="text-gray-600 text-center">Action</TableHead> */}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {transactions.map((transaction, index) => (
-                            <TableRow key={transaction.id} className=" even:bg-gray-300 text-sm hover:bg-gray-50/50">
-                                <TableCell className="border  border-gray-400">
+                  {/* Payment ID */}
+                  <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                    <span>{transaction?.payment_id || "N/A"}</span>
+                    {transaction?.payment_id && (
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(transaction.payment_id)
+                        }
+                        className="text-gray-400 hover:text-gray-900"
+                        title="Copy Payment ID"
+                      >
+                        <MdContentCopy size={13} />
+                      </button>
+                    )}
+                  </div>
+                </TableCell>
 
-                                    <CustomCheckbox
+                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
+                  <div className="flex items-center justify-center gap-2">
+                    <span>{transaction.bank_rrn || "---"}</span>
 
-                                        checked={selectedTransactions.includes(transaction.id)}
-                                        onCheckedChange={(checked) =>
-                                            handleCheckboxChange(transaction.id, checked)
-                                        }
-                                        disabled={isCheckingPayments}
-                                    />
+                    {transaction.bank_rrn && (
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(transaction.bank_rrn)
+                        }
+                        className="text-gray-400 hover:text-gray-900"
+                        title="Copy Bank RRN"
+                      >
+                        <MdContentCopy size={14} />
+                      </button>
+                    )}
+                  </div>
+                </TableCell>
 
-                                </TableCell>
-                                <TableCell className="text-gray-600 text-center font-sm border border-gray-400">
-                                    {index + 1}
-                                </TableCell>
-                                <TableCell className="text-gray-600 border border-gray-400">
-                                    {formatDate(transaction.createdAt)}
-                                </TableCell>
-                                <TableCell className="border border-gray-400">
-                                    <div className="flex items-center text-sm gap-1">
-                                        {renderTransactionIcon(transaction.type)}
-                                        <span className={`${getTransactionType(transaction.type).color} whitespace-nowrap truncate`}>
-                                            {transaction.type == 'CASH'
-                                                ? 'Add Money by RZP'
-                                                : formatTransactionType(transaction.type)}
-                                        </span>
-                                    </div>
-                                </TableCell>
+                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
+                  <div className="flex items-center justify-center gap-2">
+                    <span>{transaction.client_upi_id || "---"}</span>
 
+                    {transaction.client_upi_id && (
+                      <button
+                        onClick={() =>
+                          navigator.clipboard.writeText(
+                            transaction.client_upi_id
+                          )
+                        }
+                        className="text-gray-400 hover:text-gray-900"
+                        title="Copy UPI ID"
+                      >
+                        <MdContentCopy size={14} />
+                      </button>
+                    )}
+                  </div>
+                </TableCell>
 
-                                
-                                <TableCell className=" text-gray-700 border border-gray-400">
-                                    {transaction.user?.name || 'N/A'}
-                                    <div className="text-sm text-gray-500">
-                                        {transaction.user?.mobile || 'N/A'}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="border border-gray-400">
-                                    <Badge variant="secondary" className={getStatusBadge(transaction.status)}>
-                                        {transaction.status}
-                                        <br />
-
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-5 hover:bg-gray-100"
-                                            onClick={() => checkPaymentStatus(transaction)}
-                                        >
-                                            <History className="h-5 w-5 text-gray-500" />
-                                        </Button>
-
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
-                                    {formatCurrency(transaction.opening_balance)}
-                                </TableCell>
-                                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
-                                    {formatCurrency(transaction.amount)}
-                                </TableCell>
-                                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
-                                    {formatCurrency(transaction.closing_balance)}
-                                </TableCell>
-                                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
-                                    {transaction.bank_rrn || '---'}
-                                </TableCell>
-                                <TableCell className="text-center font-medium text-gray-700 border border-gray-400">
-                                    {transaction.client_upi_id || '---'}
-                                </TableCell>
-                                {/* <TableCell
+                {/* <TableCell
                                     className="max-w-xs truncate text-gray-500"
                                     title={transaction.msg}
                                 >
                                     {transaction.msg || '-'}
                                 </TableCell> */}
-                                {/* <TableCell className="text-center">
+                {/* <TableCell className="text-center">
                                     <Button
                                         size="sm"
                                         variant="outline"
@@ -286,17 +472,17 @@ export function TransactionTable({ transactions, isLoading }: TransactionTablePr
                                         )}
                                     </Button>
                                 </TableCell> */}
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
 
-            {selectedTransactions.length > 0 && (
-                <div className="text-sm text-gray-600">
-                    {selectedTransactions.length} transaction(s) selected
-                </div>
-            )}
+      {selectedTransactions.length > 0 && (
+        <div className="text-sm text-gray-600">
+          {selectedTransactions.length} transaction(s) selected
         </div>
-    );
+      )}
+    </div>
+  );
 }
